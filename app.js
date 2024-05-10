@@ -17,7 +17,7 @@ app.use(express.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-//   password: 'your_mysql_password',
+  password: '',
   database: 'todo'
 });
 
@@ -49,7 +49,7 @@ function authenticateToken(req, res, next) {
 
 
 //user
-app.post('/user', async (req, res) => {
+app.post('/user/register', async (req, res) => {
     const { username, password, role } = req.body;
     const salt = 10;
     const hashedpass = await bcript.hash(password, salt);
@@ -101,24 +101,40 @@ app.post('/user', async (req, res) => {
 
   })
 
+  app.get('/users',(req, res) => {
+
+
+    if (req.role === "admin") {
+        const sqlSelect = "SELECT * FROM users";
+        db.query(sqlSelect, (err, result) => {
+            res.send(result);
+        });
+    }
+    else {
+        res.send("Only admin can see the user list");
+    }
+});
+
+
+
 // Create a task
-app.post('/tasks', (req, res) => {
-  const { task_name, username } = req.body;
-  let sqlSelect = "SELECT * FROM users WHERE username = '" + username + "';";    
-  
-  db.query(sqlSelect,(err,result)=>{
-    const user_id = result[0].user_id;
-    sqlSelect = "SELECT * FROM tasks WHERE user_id = " + user_id + ";"; 
-    
-    db.query(sqlSelect,(err,tasks)=>{
+app.post('/tasks',authenticateToken, (req, res) => {
+  const { task_id, task_name, user_id , description, status} = req.body;
+  // let sqlSelect = "SELECT * FROM users WHERE username = '" + username + "';";    
+     
+  // db.query(sqlSelect,(err,result)=>{
+  //   const user_id = result[0].user_id;
+  //   sqlSelect = "SELECT * FROM tasks WHERE user_id = " + user_id + ";"; 
+  //   console.log(sqlSelect)
+    // db.query(sqlSelect,(err,tasks)=>{
       
-      sqlSelect = `INSERT INTO tasks (task_name,user_id) VALUES (?,?);`     
-      console.log(sqlSelect); 
-      db.query(sqlSelect,[task_name,user_id],(err,result)=>{
+     const sqlSelect = `INSERT INTO tasks (task_id, task_name,user_id, description, status) VALUES (?,?,?, ?, ?);`     
+  
+      db.query(sqlSelect,[task_id, task_name,user_id, description, status],(err,result)=>{
         res.send(result);
       })
-    })
-  })
+    // })
+  // })
 });
 
 // Read all tasks
@@ -162,5 +178,5 @@ app.delete('/tasks/:task_id', (req, res) => {
 });
 
 // Server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
